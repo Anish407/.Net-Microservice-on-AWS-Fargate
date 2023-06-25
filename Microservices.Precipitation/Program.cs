@@ -1,11 +1,21 @@
-var builder = WebApplication.CreateBuilder(args);
+using Microservices.Precipitation.Infra.Context;
+using Microsoft.EntityFrameworkCore;
 
+var builder = WebApplication.CreateBuilder(args);
+var config = builder.Configuration;
 // Add services to the container.
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddDbContextPool<PrecipitationDBContext>(op =>
+{
+    op.EnableSensitiveDataLogging();
+    op.EnableDetailedErrors();
+    op.UseNpgsql(config.GetConnectionString("AppDb"));
+});
 
 var app = builder.Build();
 
