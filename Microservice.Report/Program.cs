@@ -1,5 +1,14 @@
-var builder = WebApplication.CreateBuilder(args);
+using Microservice.Report.Infra.Context;
+using Microsoft.EntityFrameworkCore;
 
+var builder = WebApplication.CreateBuilder(args);
+var config = builder.Configuration;
+builder.Services.AddDbContextPool<WeatherReportContext>(op =>
+{
+    op.EnableSensitiveDataLogging();
+    op.EnableDetailedErrors();
+    op.UseNpgsql(config.GetConnectionString("AppDb"));
+});
 // Add services to the container.
 
 builder.Services.AddControllers();
