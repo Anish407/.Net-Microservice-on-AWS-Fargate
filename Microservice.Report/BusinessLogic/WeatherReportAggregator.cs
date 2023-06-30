@@ -52,7 +52,7 @@ namespace Microservice.Report.BusinessLogic
             {
                 AverageHighF = averageHighTemp,
                 AverageLowF = averageLowTemp,
-                CreatedOn = DateTime.Now,
+                CreatedOn = DateTime.UtcNow,
                 RainfallTotalInches = totalRain,
                 SnowTotalInches = totalSnow,
                 Zipcode = zip,
@@ -96,12 +96,12 @@ namespace Microservice.Report.BusinessLogic
 
         private string BuildTemperatureEndpoint(string zip, int days)
         {
-            return $"{_weatherDataConfig.TempDataProtocol}://{_weatherDataConfig.TempDataHost}:{_weatherDataConfig.TempDataPort}/observation/{zip}?days={days}";
+            return $"{_weatherDataConfig.TempDataProtocol}://{_weatherDataConfig.TempDataHost}:{_weatherDataConfig.TempDataPort}/api/Temperature/observation/{zip}?days={days}";
         }
 
         private async Task<List<PrecipitationModel>> FetchPrecipitationData(HttpClient httpClient, string zip, int days)
         {
-            string precipitationEndpoint = $"{_weatherDataConfig.PrecipDataProtocol}://{_weatherDataConfig.PrecipDataHost}:{_weatherDataConfig.PrecipDataPort}/observation/{zip}?days={days}";
+            string precipitationEndpoint = $"{_weatherDataConfig.PrecipDataProtocol}://{_weatherDataConfig.PrecipDataHost}:{_weatherDataConfig.PrecipDataPort}/api/Precipitation/observation/{zip}?days={days}";
             var precipDataResponse = await httpClient.GetAsync(precipitationEndpoint);
             var jsonSerializationOptions = new JsonSerializerOptions
             {

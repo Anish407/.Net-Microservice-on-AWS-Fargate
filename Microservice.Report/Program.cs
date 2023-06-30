@@ -1,4 +1,5 @@
 using Microservice.Report.BusinessLogic;
+using Microservice.Report.Config;
 using Microservice.Report.Infra.Context;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,6 +11,8 @@ builder.Services.AddDbContextPool<WeatherReportContext>(op =>
     op.EnableDetailedErrors();
     op.UseNpgsql(config.GetConnectionString("AppDb"));
 });
+
+builder.Services.Configure<WeatherDataConfig>(config.GetSection("WeatherDataConfig"));
 // Add services to the container.
 builder.Services.AddHttpClient();
 builder.Services.AddTransient<IWeatherReportAggregator, WeatherReportAggregator>();

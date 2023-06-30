@@ -11,7 +11,7 @@ namespace Microservice.Report.Controllers
         [HttpGet("GetWeatherReport/{zip}")]
         public async Task<IActionResult> GetWeatherReport([FromRoute]string zip, [FromQuery]int? days, [FromServices]IWeatherReportAggregator weatherReportAggregator)
         {
-            var weatherReport = weatherReportAggregator.BuildReport(zip, days.Value);
+            var weatherReport = await weatherReportAggregator.BuildReport(zip, days.Value);
             return Ok(weatherReport);
         }
     }
