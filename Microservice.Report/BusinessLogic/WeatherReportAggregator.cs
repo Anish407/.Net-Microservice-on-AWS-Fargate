@@ -4,12 +4,13 @@ using Microservice.Report.Infra.Entities;
 using Microservice.Report.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Text.Json;
 
 namespace Microservice.Report.BusinessLogic
 {
     public interface IWeatherReportAggregator
     {
-        Task<WeatherReport> BuildWeeklyReport(string zip, int days);
+        Task<WeatherReport> BuildReport(string zip, int days);
     }
 
     public class WeatherReportAggregator : IWeatherReportAggregator
@@ -32,38 +33,83 @@ namespace Microservice.Report.BusinessLogic
 
 
 
-        public async Task<WeatherReport> BuildWeeklyReport(string zip, int days)
+        public async Task<WeatherReport> BuildReport(string zip, int days)
         {
             var httpClient = __httpClientFactory.CreateClient();
 
-            var precipData = await FetchPrecipitationDaa(httpClient, zip, days);
-            var tempData = await FetchTemperatureData(httpClient, zip, days);
+            var precipData = await FetchPrecipitationData(httpClient, zip, days);
 
-            return null;
+
+            decimal totalSnow = GetTotalSnow(precipData);
+            decimal totalRain = GetTotalRain(precipData);
+            __logger.LogInformation($"Total Snow:{totalSnow}, Total Rain:{totalRain}");
+
+            var tempData = await FetchTemperatureData(httpClient, zip, days);
+            decimal averageHighTemp = tempData.Average(t => t.TempHighF);
+            decimal averageLowTemp = tempData.Average(t => t.TempLowF);
+
+            var weatherReportData = new WeatherReport
+            {
+                AverageHighF = averageHighTemp,
+                AverageLowF = averageLowTemp,
+                CreatedOn = DateTime.Now,
+                RainfallTotalInches = totalRain,
+                SnowTotalInches = totalSnow,
+                Zipcode = zip,
+            };
+
+            await _weatherReportContext.AddAsync(weatherReportData);
+            await _weatherReportContext.SaveChangesAsync();
+
+            return weatherReportData;
+        }
+
+        private decimal GetTotalRain(List<PrecipitationModel> precipData)
+        {
+            var totalRain = precipData.Where(i => i.WeatherType == "rain").Sum(p => p.AmountInches);
+            return Math.Round(totalRain, 1);
+        }
+
+        private decimal GetTotalSnow(List<PrecipitationModel> precipData)
+        {
+            var totalSnow = precipData.Where(i => i.WeatherType == "snow").Sum(p => p.AmountInches);
+            return Math.Round(totalSnow, 1);
         }
 
         private async Task<List<TemperatureModel>> FetchTemperatureData(HttpClient httpClient, string zip, int days)
         {
             string endpoint = BuildTemperatureEndpoint(zip, days);
             var response = await httpClient.GetAsync(endpoint);
-
+            var jsonSerializationOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
             if (!response.IsSuccessStatusCode)
             {
                 throw new Exception($"Error while calling {endpoint}.. StatusCode: {response.StatusCode}");
             }
 
-            var content = await response.Content.ReadFromJsonAsync<List<TemperatureModel>>();
+            var content = await response.Content.ReadFromJsonAsync<List<TemperatureModel>>(jsonSerializationOptions);
             return content ?? new List<TemperatureModel>();
         }
 
         private string BuildTemperatureEndpoint(string zip, int days)
         {
-            throw new NotImplementedException();
+            return $"{_weatherDataConfig.TempDataProtocol}://{_weatherDataConfig.TempDataHost}:{_weatherDataConfig.TempDataPort}/observation/{zip}?days={days}";
         }
 
-        private async Task<List<PrecipitationModel>> FetchPrecipitationDaa(HttpClient httpClient, string zip, int days)
+        private async Task<List<PrecipitationModel>> FetchPrecipitationData(HttpClient httpClient, string zip, int days)
         {
-            throw new NotImplementedException();
+            string precipitationEndpoint = $"{_weatherDataConfig.PrecipDataProtocol}://{_weatherDataConfig.PrecipDataHost}:{_weatherDataConfig.PrecipDataPort}/observation/{zip}?days={days}";
+            var precipDataResponse = await httpClient.GetAsync(precipitationEndpoint);
+            var jsonSerializationOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+            var precipData = await precipDataResponse.Content.ReadFromJsonAsync<List<PrecipitationModel>>(jsonSerializationOptions);
+            return precipData;
         }
     }
 }

@@ -1,3 +1,4 @@
+using Microservice.Report.BusinessLogic;
 using Microservice.Report.Infra.Context;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +11,8 @@ builder.Services.AddDbContextPool<WeatherReportContext>(op =>
     op.UseNpgsql(config.GetConnectionString("AppDb"));
 });
 // Add services to the container.
-
+builder.Services.AddHttpClient();
+builder.Services.AddTransient<IWeatherReportAggregator, WeatherReportAggregator>();
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
